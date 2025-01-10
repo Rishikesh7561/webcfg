@@ -60,7 +60,7 @@
 #define WEBCFG_SUPPORTED_VERSION_PARAM	"Device.X_RDK_WebConfig.SupportedSchemaVersion"
 #define WEBCFG_SUPPLEMENTARY_TELEMETRY_PARAM  "Device.X_RDK_WebConfig.SupplementaryServiceUrls.Telemetry"
 #define WEBCFG_SUBDOC_FORCERESET_PARAM  "Device.X_RDK_WebConfig.webcfgSubdocForceReset"
-
+ForceSyncMsg* getForceSyncMsgQueue();
 #ifdef WAN_FAILOVER_SUPPORTED
 #define WEBCFG_INTERFACE_PARAM "Device.X_RDK_WanManager.CurrentActiveInterface"
 #endif
