@@ -45,8 +45,37 @@ rbusHandle_t handle;
 extern rbusHandle_t rbus_handle;
 pthread_mutex_t sync_mutex=PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t sync_condition=PTHREAD_COND_INITIALIZER;
-
+static ForceSyncMsg *ForceSyncMsgQ = NULL;
 bool get_webcfgReady_flag =true;
+// void cleanupForceSyncMsgQueue() {
+//     ForceSyncMsg *current = getForceSyncMsgQueue();
+//     ForceSyncMsg *temp;
+
+//     while (current != NULL) {
+//         temp = current;
+//         current = current->next;
+
+//         if (temp->ForceSyncVal) {
+//             printf("Freeing ForceSyncVal: %s\n", temp->ForceSyncVal);
+//             free(temp->ForceSyncVal);
+//             temp->ForceSyncVal = NULL; // Prevent double free
+//         }
+//         if (temp->ForceSyncTransID) {
+//             printf("Freeing ForceSyncTransID: %s\n", temp->ForceSyncTransID);
+//             free(temp->ForceSyncTransID);
+//             temp->ForceSyncTransID = NULL; // Prevent double free
+//         }
+
+//         printf("Freeing ForceSyncMsg node.\n");
+//         free(temp); // Free the node itself
+//         temp = NULL; // Prevent double free
+//     }
+
+//     // Set the global queue pointer to NULL after cleanup
+//     ForceSyncMsgQ = NULL;
+//     printf("ForceSyncMsgQ cleaned up and set to NULL.\n");
+// }
+
 bool get_webcfgReady()
 {
 	return get_webcfgReady_flag;
@@ -253,6 +282,146 @@ void test_setForceSync_json()
 	strcpy(Telemetry_string,"");		
 
 }
+void test_DisplayQueue() {
+    // Set up the queue
+    ForceSyncMsgQ = (ForceSyncMsg*)malloc(sizeof(ForceSyncMsg));
+    ForceSyncMsgQ->ForceSyncVal = strdup("root");
+    ForceSyncMsgQ->ForceSyncTransID = strdup("1234");
+    ForceSyncMsgQ->next = (ForceSyncMsg*)malloc(sizeof(ForceSyncMsg));
+    ForceSyncMsgQ->next->ForceSyncVal = strdup("telemetry");
+    ForceSyncMsgQ->next->ForceSyncTransID = strdup("1235");
+    ForceSyncMsgQ->next->next = NULL;
+
+    // Clear the log buffer
+    
+
+    // Call the function to test
+    DisplayQueue();
+
+	CU_ASSERT_PTR_NOT_NULL(ForceSyncMsgQ);
+    // Clean up
+    free(ForceSyncMsgQ->next->ForceSyncVal);
+    free(ForceSyncMsgQ->next->ForceSyncTransID);
+    free(ForceSyncMsgQ->next);
+    free(ForceSyncMsgQ->ForceSyncVal);
+    free(ForceSyncMsgQ->ForceSyncTransID);
+    free(ForceSyncMsgQ);
+}
+
+void test_addForceSyncMsgToQueue(void) {
+    // Initialize the queue
+    printf("Starting test_addForceSyncMsgToQueue...\n");
+    ForceSyncMsgQ = NULL;
+
+    // Test case 1: Add the first message to an empty queue
+    CU_ASSERT_EQUAL(addForceSyncMsgToQueue("ForceSync1", "TransID1"), WEBCFG_SUCCESS);
+
+    // Verify the first message in the queue
+    ForceSyncMsgQ = getForceSyncMsgQueue();
+    CU_ASSERT_PTR_NOT_NULL(ForceSyncMsgQ);
+    if (ForceSyncMsgQ != NULL) {
+        CU_ASSERT_STRING_EQUAL(ForceSyncMsgQ->ForceSyncVal, "ForceSync1");
+        CU_ASSERT_STRING_EQUAL(ForceSyncMsgQ->ForceSyncTransID, "TransID1");
+        CU_ASSERT_PTR_NULL(ForceSyncMsgQ->next);
+    }
+
+    // Test case 2: Add the second message to the queue
+    CU_ASSERT_EQUAL(addForceSyncMsgToQueue("ForceSync2", "TransID2"), WEBCFG_SUCCESS);
+
+    // Verify the second message in the queue
+    ForceSyncMsgQ = getForceSyncMsgQueue();
+    CU_ASSERT_PTR_NOT_NULL(ForceSyncMsgQ->next);
+    if (ForceSyncMsgQ->next != NULL) {
+        CU_ASSERT_STRING_EQUAL(ForceSyncMsgQ->next->ForceSyncVal, "ForceSync2");
+        CU_ASSERT_STRING_EQUAL(ForceSyncMsgQ->next->ForceSyncTransID, "TransID2");
+        CU_ASSERT_PTR_NULL(ForceSyncMsgQ->next->next);
+    }
+
+//   cleanupForceSyncMsgQueue();
+//   CU_ASSERT_PTR_NULL(ForceSyncMsgQ);
+    // Verify the queue is cleared
+   
+    
+}
+
+// void test_deleteForceSyncMsgQueue_simple() {
+//     WebcfgDebug("Starting test_deleteForceSyncMsgQueue_simple...\n");
+//    ForceSyncMsgQ = NULL;
+//     // Initialize the queue
+//     CU_ASSERT_EQUAL(addForceSyncMsgToQueue("ForceSync1", "TransID1"), WEBCFG_SUCCESS);
+//    ForceSyncMsgQ = getForceSyncMsgQueue();
+//     // Validate the queue
+//     CU_ASSERT_PTR_NOT_NULL(ForceSyncMsgQ);
+
+//     // Call deleteForceSyncMsgQueue
+//     deleteForceSyncMsgQueue();
+
+//     // Verify the queue is cleared
+//     CU_ASSERT_PTR_NULL(ForceSyncMsgQ);
+//     WebcfgDebug("Completed test_deleteForceSyncMsgQueue_simple.\n");
+// }
+
+void test_updateForceSyncMsgQueue(void) {
+    // Initialize the queue
+    ForceSyncMsgQ = NULL;
+
+    // Add two nodes to the queue for testing
+    addForceSyncMsgToQueue("ForceSync1", "TransID1");
+    addForceSyncMsgToQueue("ForceSync2", "TransID2");
+
+    // Verify the initial state of the queue
+    ForceSyncMsg* temp = ForceSyncMsgQ;
+    CU_ASSERT_PTR_NOT_NULL(temp);
+    if (temp) {
+        CU_ASSERT_STRING_EQUAL(temp->ForceSyncVal, "ForceSync1");
+        CU_ASSERT_STRING_EQUAL(temp->ForceSyncTransID, "TransID1");
+    }
+    temp = temp->next;
+    CU_ASSERT_PTR_NOT_NULL(temp);
+    if (temp) {
+        CU_ASSERT_STRING_EQUAL(temp->ForceSyncVal, "ForceSync2");
+        CU_ASSERT_STRING_EQUAL(temp->ForceSyncTransID, "TransID2");
+    }
+
+    // Test case 1: Update the transaction ID for an existing value in the queue
+    CU_ASSERT_TRUE(updateForceSyncMsgQueue("UpdatedTransID1"));
+
+    // Verify that the transaction ID has been updated
+    temp = ForceSyncMsgQ;
+    CU_ASSERT_PTR_NOT_NULL(temp);
+    if (temp) {
+        CU_ASSERT_STRING_EQUAL(temp->ForceSyncVal, "ForceSync1");
+        CU_ASSERT_STRING_EQUAL(temp->ForceSyncTransID, "UpdatedTransID1");
+    }
+
+    // Test case 2: Attempt to update a non-existent value
+    CU_ASSERT_FALSE(updateForceSyncMsgQueue("NonExistentTransID"));
+
+    // Verify that the queue remains unchanged
+    temp = ForceSyncMsgQ;
+    CU_ASSERT_PTR_NOT_NULL(temp);
+    if (temp) {
+        CU_ASSERT_STRING_EQUAL(temp->ForceSyncVal, "ForceSync1");
+        CU_ASSERT_STRING_EQUAL(temp->ForceSyncTransID, "UpdatedTransID1");
+    }
+    temp = temp->next;
+    CU_ASSERT_PTR_NOT_NULL(temp);
+    if (temp) {
+        CU_ASSERT_STRING_EQUAL(temp->ForceSyncVal, "ForceSync2");
+        CU_ASSERT_STRING_EQUAL(temp->ForceSyncTransID, "TransID2");
+    }
+
+    // Clean up the queue
+    deleteForceSyncMsgQueue();
+    CU_ASSERT_PTR_NULL(ForceSyncMsgQ);
+}
+
+
+
+
+
+
+
 
 // Test case for isRbusEnabled
 void test_isRbusEnabled_success()
@@ -1866,6 +2035,9 @@ void add_suites( CU_pSuite *suite )
      	CU_add_test( *suite, "test rbusWebcfgEventHandler", test_rbusWebcfgEventHandler);
      	CU_add_test( *suite, "test fetchMpBlobData", test_fetchMpBlobData);
      	CU_add_test( *suite, "test webcfg_util_method", test_webcfg_util_method);
+		CU_add_test( *suite, "test DisplayQueue()", test_DisplayQueue);
+		CU_add_test( *suite, "test DisplayQueue()", test_addForceSyncMsgToQueue);
+		CU_add_test( *suite, "test updateForceSyncMsgQueue", test_updateForceSyncMsgQueue);
 	#ifdef WAN_FAILOVER_SUPPORTED
      	CU_add_test( *suite, "test eventReceiveHandler", test_eventReceiveHandler);			
      	CU_add_test( *suite, "test subscribeTo_CurrentActiveInterface_Event", test_subscribeTo_CurrentActiveInterface_Event);
@@ -1908,5 +2080,8 @@ int main( int argc, char *argv[] )
 
     return rv;
 }
+
+
+
 
 
