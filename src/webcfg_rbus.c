@@ -77,6 +77,9 @@ typedef struct
 } rbusParamVal_t;
 
 static ForceSyncMsg *ForceSyncMsgQ = NULL;
+ForceSyncMsg* getForceSyncMsgQueue() {
+    return ForceSyncMsgQ;
+}
 pthread_mutex_t ForceSyncMsgQ_mut=PTHREAD_MUTEX_INITIALIZER;
 
 bool get_global_isRbus(void)
