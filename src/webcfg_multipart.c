@@ -155,7 +155,9 @@ char *get_global_ETAG(void)
 {
     return g_ETAG;
 }
-
+const char* getForceSyncTransID() {
+    return g_ForceSyncTransID;
+}
 #ifdef WAN_FAILOVER_SUPPORTED
 void set_global_interface(char * value)
 {
