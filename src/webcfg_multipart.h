@@ -64,6 +64,7 @@ multipartdocs_t * get_global_mp(void);
 void set_global_mp(multipartdocs_t *new);
 void reqParam_destroy( int paramCnt, param_t *reqObj );
 void failedDocsRetry();
+const char* getForceSyncTransID();
 WEBCFG_STATUS validate_request_param(param_t *reqParam, int paramCount);
 void refreshConfigVersionList(char *versionsList, int http_status, char *docsList);
 char * get_global_contentLen(void);
