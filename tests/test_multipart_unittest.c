@@ -1007,7 +1007,16 @@ void test_get_webCfg_interface()
     		WebcfgError("Failed to remove file");
 	}
 }
+void test_setForceTransID() {
+    // Test with a valid transaction ID
+    char testTransID[] = "1234";
+    setForceSyncTransID(testTransID);
+    CU_ASSERT_STRING_EQUAL(getForceSyncTransID(), "1234");
 
+    // Test with a NULL transaction ID
+    setForceSyncTransID(NULL);
+    CU_ASSERT_STRING_EQUAL(getForceSyncTransID(), ""); // g_ForceSyncTransID should be cleared
+}
 void test_headr_callback()
 {
 	char buffer[100] = "Etag: 2132354";
@@ -1240,6 +1249,7 @@ void add_suites( CU_pSuite *suite )
       CU_add_test( *suite, "test  set_global_eventFlag", test_set_global_eventFlag);
       CU_add_test( *suite, "test  get_global_eventFlag", test_get_global_eventFlag);
       CU_add_test( *suite, "test  reset_global_eventFlag", test_reset_global_eventFlag);
+      CU_add_test( *suite, "test setForceTransID", test_setForceTransID);
 #ifdef WAN_FAILOVER_SUPPORTED
       CU_add_test( *suite, "test  set_global_interface", test_set_global_interface);
       CU_add_test( *suite, "test  get_global_interface", test_get_global_interface);
