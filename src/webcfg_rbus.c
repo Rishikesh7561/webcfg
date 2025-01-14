@@ -84,6 +84,11 @@ bool get_global_isRbus(void)
     return isRbus;
 }
 
+ForceSyncMsg* getForceSyncMsgQueue() 
+{
+    return ForceSyncMsgQ;
+}
+
 rbusHandle_t get_global_rbus_handle(void)
 {
      return rbus_handle;

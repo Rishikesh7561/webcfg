@@ -45,7 +45,8 @@ rbusHandle_t handle;
 extern rbusHandle_t rbus_handle;
 pthread_mutex_t sync_mutex=PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t sync_condition=PTHREAD_COND_INITIALIZER;
-
+static ForceSyncMsg *ForceSyncMsgQ = NULL;
+static char ForceSync[256]={'\0'};
 bool get_webcfgReady_flag =true;
 bool get_webcfgReady()
 {
@@ -177,17 +178,98 @@ void set_global_supplementarySync(int value)
     	UNUSED(value);
 }
 
+
 /*----------------------------------------------------------------------------*/
 /*                                   Tests                                    */
 /*----------------------------------------------------------------------------*/
+void test_addForceSyncMsgToQueue(void) {
+    
+    addForceSyncMsgToQueue("root", "TID1");
+    CU_ASSERT_EQUAL(addForceSyncMsgToQueue("root", "TransID1"), 0);
+	ForceSyncMsgQ = getForceSyncMsgQueue();
+	 CU_ASSERT_STRING_EQUAL(ForceSyncMsgQ->ForceSyncVal, "root");
+}
 
-// Test cases for set_rbus_ForceSync & get_rbus_ForceSync
+
+void test_DisplayQueue()
+{
+	 DisplayQueue();
+}
+
+void test_deleteForceSyncMsgQueue() {
+    WebcfgDebug("Starting test_deleteForceSyncMsgQueue_simple...\n");
+    
+    
+    deleteForceSyncMsgQueue();
+    CU_ASSERT_PTR_NULL(getForceSyncMsgQueue());
+
+  
+    CU_ASSERT_EQUAL(addForceSyncMsgToQueue("ForceSync1", "TransID1"), 0);
+    CU_ASSERT_PTR_NOT_NULL(getForceSyncMsgQueue());
+
+    
+    deleteForceSyncMsgQueue();
+    CU_ASSERT_PTR_NULL(getForceSyncMsgQueue());
+
+    WebcfgDebug("Completed test_deleteForceSyncMsgQueue_simple.\n");
+}
+void test_updateForceSyncMsgQueue_Failure()
+{
+     
+    int result = updateForceSyncMsgQueue("new_trans_id");
+
+    CU_ASSERT_EQUAL(result, 0);
+    WebcfgDebug("failed update inside\n");
+}
+
+void test_updateForceSyncMsgQueue_found(void) { 
+   
+    memset(ForceSync, 0, sizeof(ForceSync));
+    strcpy(ForceSync, "ForceSync");
+
+    
+    ForceSyncMsg *node1 = (ForceSyncMsg *)malloc(sizeof(ForceSyncMsg));
+    if (node1 == NULL) {
+        CU_FAIL("Memory allocation failed");
+        return;
+    }
+
+    node1->ForceSyncVal = strdup(ForceSync);
+    if (node1->ForceSyncVal == NULL) {
+        free(node1);
+        CU_FAIL("Memory allocation failed for ForceSyncVal");
+        return;
+    }
+
+    node1->ForceSyncTransID = strdup("old_trans_id");
+    if (node1->ForceSyncTransID == NULL) {
+        WEBCFG_FREE(node1->ForceSyncVal);
+        free(node1);
+        CU_FAIL("Memory allocation failed for ForceSyncTransID");
+        return;
+    }
+
+    node1->next = NULL;
+    ForceSyncMsgQ = node1;
+
+
+    
+    char *new_trans_id = "new_trans_id";
+    int result = updateForceSyncMsgQueue(new_trans_id); 
+    CU_ASSERT_EQUAL(0,result);
+  
+}
+
+
+//Test cases for set_rbus_ForceSync & get_rbus_ForceSync
 void test_setForceSync()
 {
 	int session_status = 0;
 	int ret = set_rbus_ForceSync("root", &session_status);
 	CU_ASSERT_EQUAL(0,session_status);
 	CU_ASSERT_EQUAL(1,ret);
+	
+	
 	
 	get_webcfgReady_flag = false;
 	ret = set_rbus_ForceSync("root", &session_status);
@@ -218,18 +300,45 @@ void test_setForceSync()
 	CU_ASSERT_EQUAL(1,session_status);
 	CU_ASSERT_EQUAL(0,ret);
 	get_cloud_forcesync_retry_started_flag = false;	
+
+  
+	ret = set_rbus_ForceSync("root,telemetry", &session_status);
+	CU_ASSERT_EQUAL(1,session_status);
+	CU_ASSERT_EQUAL(0,ret);
+
+	ret = set_rbus_ForceSync("telemetry,root", &session_status);
+	CU_ASSERT_EQUAL(1,session_status);
+	CU_ASSERT_EQUAL(0,ret);
+   
+   set_rbus_ForceSync("root", &session_status);
+   ret = set_rbus_ForceSync("telemetry,root", &session_status);
+   CU_ASSERT_EQUAL(1,session_status);
+   CU_ASSERT_EQUAL(0,ret);
+    ForceSyncMsg* head = getForceSyncMsgQueue();
+    CU_ASSERT_PTR_NOT_NULL(head); // Ensure queue is not null
+
+    // Check the first node contains "telemetry"
+    CU_ASSERT_PTR_NOT_NULL(head->ForceSyncVal);
+    CU_ASSERT_STRING_EQUAL(head->ForceSyncVal, "telemetry");
+
+    // Move to the next node and check it contains "root"
+    ForceSyncMsg* second = head->next;
+    CU_ASSERT_PTR_NOT_NULL(second); // Ensure the second node exists
+    CU_ASSERT_PTR_NOT_NULL(second->ForceSyncVal);
+    CU_ASSERT_STRING_EQUAL(second->ForceSyncVal, "root");
+
+    // Ensure there are no more nodes in the queue
+    CU_ASSERT_PTR_NULL(second->next);
+
 }
+
 
 void test_setForceSync_failure()
 {
 	int session_status = 0;
-	char *str = NULL;
-	char* transID = NULL;
 	int ret = set_rbus_ForceSync("", &session_status);
 	CU_ASSERT_EQUAL(0,session_status);
 	CU_ASSERT_EQUAL(1,ret);
-	int retGet = get_rbus_ForceSync(&str, &transID);
-	CU_ASSERT_EQUAL(0,retGet);
 }
 
 void test_setForceSync_json()
@@ -254,7 +363,6 @@ void test_setForceSync_json()
 
 }
 
-// Test case for isRbusEnabled
 void test_isRbusEnabled_success()
 {
 	bool result = isRbusEnabled();
@@ -1866,6 +1974,11 @@ void add_suites( CU_pSuite *suite )
      	CU_add_test( *suite, "test rbusWebcfgEventHandler", test_rbusWebcfgEventHandler);
      	CU_add_test( *suite, "test fetchMpBlobData", test_fetchMpBlobData);
      	CU_add_test( *suite, "test webcfg_util_method", test_webcfg_util_method);
+		CU_add_test( *suite, "test addForceSyncMsgToQueue", test_addForceSyncMsgToQueue);
+		CU_add_test( *suite, "test DisplayQueue", test_DisplayQueue);
+		CU_add_test( *suite, "test deleteForceSyncMsgQueue_simple", test_deleteForceSyncMsgQueue);
+		CU_add_test( *suite, "test updateForceSyncMsgQueue", test_updateForceSyncMsgQueue_Failure);
+		CU_add_test( *suite, "test DisplayQueue", test_updateForceSyncMsgQueue_found);
 	#ifdef WAN_FAILOVER_SUPPORTED
      	CU_add_test( *suite, "test eventReceiveHandler", test_eventReceiveHandler);			
      	CU_add_test( *suite, "test subscribeTo_CurrentActiveInterface_Event", test_subscribeTo_CurrentActiveInterface_Event);

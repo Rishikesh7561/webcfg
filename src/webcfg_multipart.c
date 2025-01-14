@@ -100,6 +100,10 @@ char * get_global_transID(void)
     return g_transID;
 }
 
+const char* getForceSyncTransID() {
+    return g_ForceSyncTransID;
+}
+
 void set_global_transID(char *id)
 {
 	strncpy(g_transID, id, sizeof(g_transID)-1);

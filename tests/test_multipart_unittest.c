@@ -348,6 +348,16 @@ void test_checkValidURL_InvalidURL(){
 	CU_ASSERT_STRING_EQUAL(webConfigURL,expected_url);
 }
 
+void test_setForceTransID() {
+    // Test with a valid transaction ID
+    char testTransID[] = "1234";
+    setForceSyncTransID(testTransID);
+    CU_ASSERT_STRING_EQUAL(getForceSyncTransID(), "1234");
+
+    // Test with a NULL transaction ID
+    setForceSyncTransID(NULL);
+    CU_ASSERT_STRING_EQUAL(getForceSyncTransID(), ""); // g_ForceSyncTransID should be cleared
+}
 
 void test_createHeader(){
 	
@@ -1240,6 +1250,7 @@ void add_suites( CU_pSuite *suite )
       CU_add_test( *suite, "test  set_global_eventFlag", test_set_global_eventFlag);
       CU_add_test( *suite, "test  get_global_eventFlag", test_get_global_eventFlag);
       CU_add_test( *suite, "test  reset_global_eventFlag", test_reset_global_eventFlag);
+	  CU_add_test( *suite, "test  reset_global_eventFlag", test_setForceTransID);
 #ifdef WAN_FAILOVER_SUPPORTED
       CU_add_test( *suite, "test  set_global_interface", test_set_global_interface);
       CU_add_test( *suite, "test  get_global_interface", test_get_global_interface);

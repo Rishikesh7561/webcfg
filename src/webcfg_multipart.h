@@ -57,6 +57,7 @@ WEBCFG_STATUS checkRootUpdate();
 WEBCFG_STATUS checkRootDelete();
 WEBCFG_STATUS updateRootVersionToDB();
 WEBCFG_STATUS deleteRootAndMultipartDocs();
+const char* getForceSyncTransID();
 char * get_global_transID(void);
 char* generate_trans_uuid();
 void set_global_transID(char *id);
