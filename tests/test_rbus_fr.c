@@ -224,11 +224,12 @@ void test_updateForceSyncMsgQueue_found(void) {
     }
  CU_ASSERT_NOT_EQUAL(0,res);
 
- while (temp != NULL) {
-       
+  while (temp != NULL) {
+       ForceSyncMsg *next = temp->next;
         free(temp->ForceSyncVal);
         free(temp->ForceSyncTransID);
         free(temp);
+	temp = next;
     }
 
 }
