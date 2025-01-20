@@ -340,6 +340,24 @@ void test_setForceSync_failure()
 	CU_ASSERT_EQUAL(1,ret);
 }
 
+void test_setForceSync_json()
+{
+	char *data = "{ \"value\":\"root\", \"transaction_id\":\"e35c746c-bf15-43baXXXXXXXXXXXXXXXXXx____XXXXXXXXXXXXXX\"}";
+	int session_status = 0;
+	int retSet = set_rbus_ForceSync(data, &session_status);
+	CU_ASSERT_EQUAL(0,session_status);
+	CU_ASSERT_EQUAL(1,retSet);
+	
+	char *data1 = "{ \"value\":\"telemetry\", \"transaction_id\":\"e35c746c-bf15-43baXXXXXXXXXXXXXXXXXx____XXXXXXXXXXXXXX\"}";
+	session_status = 0;	
+	strcpy(Telemetry_string,"NULL");
+	retSet = set_rbus_ForceSync(data1, &session_status);
+	CU_ASSERT_EQUAL(0,session_status);
+	CU_ASSERT_EQUAL(0,retSet);
+	strcpy(Telemetry_string,"");		
+
+}
+
 void test_isRbusEnabled_success()
 {
 	bool result = isRbusEnabled();
@@ -1906,6 +1924,7 @@ void add_suites( CU_pSuite *suite )
 	*suite = CU_add_suite( "tests", NULL, NULL );
      	CU_add_test( *suite, "test rbus_forcesync", test_setForceSync);
      	CU_add_test( *suite, "test rbus_forcesync_failure", test_setForceSync_failure);
+	CU_add_test( *suite, "test rbus_forcesync_failure", test_setForceSync_json);
      	CU_add_test( *suite, "test isRbusEnabled_success", test_isRbusEnabled_success);
      	CU_add_test( *suite, "test get_global_isRbus_success", test_get_global_isRbus_success);
      	CU_add_test( *suite, "test isRfcEnabled_success", test_isRfcEnabled_success);
